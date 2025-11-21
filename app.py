@@ -7,14 +7,11 @@ from io import BytesIO
 import json
 import os
 
-# Known genuine apps (ground truth: package IDs for official apps)
 GENUINE_APPS = {
     "paytm": "net.one97.paytm",
     "google pay": "com.google.android.apps.nbu.paisa.user",
-    # Add more as needed
 }
 
-# Suspicious keywords in descriptions
 SUSPICIOUS_KEYWORDS = ["scam", "fraud",
                        "fake", "update required", "hack", "steal"]
 
@@ -84,26 +81,25 @@ def compute_signals(official_title, official_package, official_developer, offici
     """Compute similarity signals."""
     signals = {}
 
-    # Name similarity
+
     signals['name_similarity'] = fuzz.ratio(
         official_title.lower(), candidate['title'].lower())
 
-    # Package name similarity
     signals['package_similarity'] = fuzz.ratio(
         official_package, candidate['appId'])
 
-    # Publisher mismatch
+
     signals['publisher_match'] = 100 if official_developer.lower(
     ) in candidate['developer'].lower() else 0
 
-    # Icon similarity
+ 
     candidate_hash = download_and_hash_icon(candidate['icon'])
     if candidate_hash and official_icon_hash and candidate_hash == official_icon_hash:
         signals['icon_similarity'] = 100
     else:
         signals['icon_similarity'] = 0
 
-    # Suspicious keywords
+ 
     desc_lower = candidate['description'].lower()
     keyword_count = sum(1 for kw in SUSPICIOUS_KEYWORDS if kw in desc_lower)
     signals['suspicious_keywords'] = min(keyword_count * 20, 100)
@@ -113,7 +109,6 @@ def compute_signals(official_title, official_package, official_developer, offici
 
 def calculate_risk_score(signals):
     """Revised rule-based risk score (0-100): High similarity in name/pkg + mismatches = high risk."""
-    # Weights: Name 20%, Package 20%, Publisher mismatch 30%, Icon mismatch 20%, Keywords 10%
     score = (
         (signals['name_similarity'] * 0.2) +
         (signals['package_similarity'] * 0.2) +
@@ -125,7 +120,6 @@ def calculate_risk_score(signals):
 
 
 def main():
-    # Step 1: Fetch and save database if needed
     db_file = 'playstore_apps.json'
     if not os.path.exists(db_file):
         query = input(
@@ -134,13 +128,11 @@ def main():
             input("Enter number of apps to fetch (default 100): ") or 100)
         fetch_and_save_database(query, num_results, db_file)
 
-    # Load database
     candidates = load_database(db_file)
     if not candidates:
         print("No database loaded. Exiting.")
         return
 
-    # Step 2: Run fake app detection
     brand = input("Enter brand name (e.g., 'Paytm'): ").strip().lower()
     if brand not in GENUINE_APPS:
         print("Brand not in known genuine list. Add to GENUINE_APPS dict.")
@@ -165,10 +157,8 @@ def main():
             'flagged': score > 50
         })
 
-    # Sort by score descending
     results.sort(key=lambda x: x['score'], reverse=True)
 
-    # Output table
     print("\nCandidate Apps (Top Suspicious First):")
     print("Title | Package ID | Score | Flagged | Reasons")
     print("-" * 80)
@@ -186,3 +176,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
